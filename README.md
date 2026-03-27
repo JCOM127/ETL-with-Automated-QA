@@ -1,78 +1,141 @@
-# ETL Challenge with Automated QA
+# ETL Pipeline with Automated QA
 
-A production-pattern ETL pipeline built with PySpark and Pydantic, demonstrating
-two-layer data quality enforcement, structured audit reporting, and mocked alerting.
+A PySpark + Pydantic pipeline that validates, transforms, and audits customer and
+transaction data, then writes a JSON report telling you exactly what broke and why.
 
-## Why PySpark?
+---
 
-PySpark is chosen deliberately for **horizontal scalability**.  The same pipeline
-code runs unchanged on a local laptop (`local[*]`), an AWS EMR cluster, Databricks,
-or Google Dataproc — the only change is one configuration line: the Spark master URL.
+## What it does
 
-## Directory Structure
+1. **Rejects bad records at the door,** a Pydantic gate checks every raw record before
+   it touches Spark. NULL emails, empty names, negative amounts: rejected immediately
+   with a reason attached.
+2. **Runs four data quality checks on what survives,** completeness, uniqueness,
+   referential integrity, and a per-country amount reconciliation between raw and clean.
+3. **Writes `audit_report.json`,** a timestamped JSON file with every check result,
+   rejection count, and the overall pass/fail verdict.
+4. **Fires mocked alerts,** webhook and email dispatchers with production-ready
+   signatures, ready to wire to PagerDuty or SendGrid.
 
-```
-etl_challenge/
-├── etl_challenge/          # Main package
-│   ├── data/               # Hardcoded mock datasets
-│   ├── contracts/          # Pydantic entrance gate (Layer 1 QA)
-│   ├── ingestion/          # Record loader — splits clean vs. rejected
-│   ├── transforms/         # PySpark join + aggregation (Layer 2)
-│   ├── audit/              # 4 post-load QA checks (Layer 2 QA)
-│   ├── alerts/             # Webhook and email dispatchers (mocked)
-│   └── reporting/          # JSON audit report builder
-├── tests/
-│   ├── unit/               # Fast isolated tests
-│   ├── integration/        # Multi-module wiring tests
-│   └── functional/         # End-to-end alert tests
-├── notebooks/poc.ipynb     # Narrative walkthrough
-└── .github/workflows/      # CI: lint → test → deploy
-```
+> **Why PySpark?** Changing one line, the Spark master URL, moves this pipeline from
+> your laptop to AWS EMR, Databricks, or Google Dataproc unchanged. That is the
+> scalability argument. No rewrite, no re-architecture.
 
-## Setup
+---
+
+## Prerequisites
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| Python | 3.11+ | |
+| Java | 17 | Required by PySpark, see Docker below to skip this |
+| Docker | any recent | Recommended: avoids Java setup entirely |
+
+---
+
+## Quickstart: Docker (recommended)
+
+No Java, no virtualenv, no surprises.
 
 ```bash
+# Build once
+docker compose build
+
+# Run the full test suite
+docker compose run test
+
+# Run integration tests only, produces audit_report.json in this folder
+docker compose run integration
+
+# Open the notebook walkthrough at http://localhost:8888
+docker compose up notebook
+```
+
+---
+
+## Quickstart: Local
+
+```bash
+# Install package + dev dependencies
 pip install -e ".[dev]"
-```
 
-## Run the Notebook
+# Run tests
+pytest -m unit          # fast, no Spark warmup
+pytest -m integration   # runs the full pipeline, writes audit_report.json
+pytest -m functional    # verifies alert dispatchers are called correctly
 
-```bash
+# Open the notebook
 jupyter notebook notebooks/poc.ipynb
 ```
 
-## Run Tests
+---
 
-```bash
-# All tests
-pytest tests/ -v
+## What you'll see
 
-# By marker
-pytest -m unit
-pytest -m integration
-pytest -m functional
+After `pytest -m integration`, open `audit_report.json`:
+
+```json
+{
+  "timestamp": "...",
+  "overall_pass": false,
+  "rejected_at_gate": { "customers": 3, "transactions": 1 },
+  "audit_checks": [
+    { "check_name": "completeness",          "passed": true,  "details": {...} },
+    { "check_name": "uniqueness",            "passed": false, "details": {...} },
+    { "check_name": "referential_integrity", "passed": false, "details": {...} },
+    { "check_name": "reconciliation",        "passed": false, "details": {...} }
+  ]
+}
 ```
 
-## CI Pipeline
+Three of four checks fail, by design. The mock data contains NULL fields, duplicate
+emails, an orphan transaction, and a country whose totals change after cleaning. Every
+check is supposed to catch something real.
 
-Three jobs run in sequence via GitHub Actions:
+---
 
-1. **lint** — `ruff check` + `ruff format --check`
-2. **test** — `pytest tests/ -v --tb=short`
-3. **deploy** — mocked echo step (no live target in this challenge)
+## Project layout
 
-## Extending the Pipeline
+```
+etl_challenge/
+├── etl_challenge/
+│   ├── data/mock_data.py       intentionally dirty mock datasets
+│   ├── contracts/              Pydantic models, entrance gate (Layer 1 QA)
+│   ├── ingestion/loader.py     splits records into clean / rejected
+│   ├── transforms/pipeline.py  PySpark join + country aggregation
+│   ├── audit/checks.py         four QA checks returning AuditResult
+│   ├── alerts/dispatcher.py    send_webhook / send_email (mocked bodies)
+│   └── reporting/report.py     build_report / save_report
+├── tests/
+│   ├── unit/                   28 tests total, fast, isolated
+│   ├── integration/            full pipeline wired end-to-end
+│   └── functional/             alert dispatcher call assertions
+├── notebooks/poc.ipynb         narrative walkthrough, runs top to bottom
+├── Dockerfile / docker-compose.yml
+└── .github/workflows/ci.yml    lint, test, deploy (mocked)
+```
 
-### Adding a New QA Check
+---
 
-1. Add a function to `etl_challenge/audit/checks.py` returning `AuditResult`.
-2. Call it in `tests/integration/test_pipeline.py` and add unit tests in
-   `tests/unit/test_checks.py`.
-3. Pass the result into `build_report()` in your orchestration script.
+## CI
 
-### Adding a New Alert Channel
+GitHub Actions runs three jobs in sequence on every push:
 
-1. Add a new function to `etl_challenge/alerts/dispatcher.py` with a Google Style
-   docstring describing its production behaviour.
-2. Add a functional test in `tests/functional/test_alerts.py` using
-   `unittest.mock.patch` to assert the function is called correctly.
+```
+lint   ->  ruff check + ruff format --check
+test   ->  pytest tests/ -v --tb=short
+deploy ->  echo (mocked, no live target)
+```
+
+---
+
+## Extending
+
+**New QA check:**
+1. Add a function to [`audit/checks.py`](etl_challenge/audit/checks.py) returning `AuditResult`
+2. Add a unit test (pass + fail case) to [`tests/unit/test_checks.py`](tests/unit/test_checks.py)
+3. Add it to the results list in [`tests/integration/test_pipeline.py`](tests/integration/test_pipeline.py)
+
+**New alert channel:**
+1. Add a function to [`alerts/dispatcher.py`](etl_challenge/alerts/dispatcher.py)
+2. Add a functional test to [`tests/functional/test_alerts.py`](tests/functional/test_alerts.py) using `unittest.mock.patch`
