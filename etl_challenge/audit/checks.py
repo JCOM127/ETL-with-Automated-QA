@@ -121,8 +121,9 @@ def _raw_totals_by_country(
     cust_df = spark.createDataFrame(raw_customers)
     txn_df = spark.createDataFrame(raw_transactions)
     return (
-        txn_df
-        .join(cust_df.select("customer_id", "country"), on="customer_id", how="left")
+        txn_df.join(
+            cust_df.select("customer_id", "country"), on="customer_id", how="left"
+        )
         .filter(F.col("amount").isNotNull() & F.col("country").isNotNull())
         .groupBy("country")
         .agg(F.sum("amount").alias("raw_total"))
@@ -150,7 +151,9 @@ def check_reconciliation(
     spark = SparkSession.builder.getOrCreate()
     raw_totals = _raw_totals_by_country(raw_customers, raw_transactions, spark)
     clean_totals = aggregated_df.withColumnRenamed("total_amount", "clean_total")
-    comparison = raw_totals.join(clean_totals, on="country", how="full_outer").fillna(0.0)
+    comparison = raw_totals.join(clean_totals, on="country", how="full_outer").fillna(
+        0.0
+    )
     mismatches = [
         r.asDict()
         for r in comparison.filter(F.col("raw_total") != F.col("clean_total")).collect()

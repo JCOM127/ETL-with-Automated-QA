@@ -112,7 +112,7 @@ def sample_dirty_transactions_df(spark):
     """
     data = [
         (100, 1, 200.0, "2025-01-01"),
-        (103, 3, None, "2025-01-03"),   # NULL amount
+        (103, 3, None, "2025-01-03"),  # NULL amount
         (104, 99, 300.0, "2025-01-04"),  # customer_id 99 does not exist
     ]
     return spark.createDataFrame(data, schema=_TRANSACTION_SCHEMA)
@@ -127,5 +127,9 @@ def sample_audit_results():
     """
     return [
         AuditResult(check_name="completeness", passed=True, details={}),
-        AuditResult(check_name="uniqueness", passed=False, details={"duplicate_emails": ["x@y.com"]}),
+        AuditResult(
+            check_name="uniqueness",
+            passed=False,
+            details={"duplicate_emails": ["x@y.com"]},
+        ),
     ]

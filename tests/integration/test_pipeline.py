@@ -48,7 +48,9 @@ def test_all_audit_checks_produce_at_least_one_failure():
     from pyspark.sql import SparkSession
 
     ingestion = load_and_validate(CUSTOMERS_RAW, TRANSACTIONS_RAW)
-    joined_df, aggregated_df = run_pipeline(ingestion.clean_customers, ingestion.clean_transactions)
+    joined_df, aggregated_df = run_pipeline(
+        ingestion.clean_customers, ingestion.clean_transactions
+    )
 
     spark = SparkSession.builder.getOrCreate()
     customers_df = spark.createDataFrame(ingestion.clean_customers)
