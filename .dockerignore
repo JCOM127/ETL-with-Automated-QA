@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Pytest
+.pytest_cache/
+.coverage
+
+# PySpark / Java
+derby.log
+metastore_db/
+spark-warehouse/
+
+# Pipeline output
+audit_report.json
+
+# Jupyter checkpoints
+notebooks/.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Presentation docs
+EXPLAINER.md
+
+# Git
+.git/
+.gitignore
+
+# CI (not needed inside the container)
+.github/

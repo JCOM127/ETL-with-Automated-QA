@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "etl_challenge"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "pyspark>=3.5",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.4",
+    "jupyter>=1.0",
+]
+
+[tool.ruff]
+line-length = 88
+exclude = ["notebooks/"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: fast, isolated unit tests",
+    "integration: tests that wire multiple modules together",
+    "functional: end-to-end behavioural tests",
+]

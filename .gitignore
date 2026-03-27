@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# PySpark / Java
+derby.log
+metastore_db/
+spark-warehouse/
+
+# Pipeline output
+audit_report.json
+
+# Jupyter
+notebooks/.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Presentation docs
+EXPLAINER.md

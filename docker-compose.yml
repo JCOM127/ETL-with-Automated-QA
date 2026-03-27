@@ -1,0 +1,35 @@
+services:
+  # Run the full test suite and write audit_report.json to the host.
+  test:
+    build: .
+    volumes:
+      - .:/app          # mounts the project so audit_report.json appears on host
+    command: pytest tests/ -v --tb=short
+
+  # Run only unit tests (no Spark startup overhead).
+  unit:
+    build: .
+    command: pytest -m unit -v --tb=short
+
+  # Run only integration tests (requires Spark; produces audit_report.json).
+  integration:
+    build: .
+    volumes:
+      - .:/app
+    command: pytest -m integration -v --tb=short
+
+  # Launch Jupyter Notebook for the poc.ipynb walkthrough.
+  notebook:
+    build: .
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+    command: >
+      jupyter notebook
+        --ip=0.0.0.0
+        --port=8888
+        --no-browser
+        --allow-root
+        --NotebookApp.token=''
+        --notebook-dir=/app/notebooks
