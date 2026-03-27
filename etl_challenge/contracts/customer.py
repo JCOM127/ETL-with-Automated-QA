@@ -4,7 +4,7 @@ Acts as the entrance gate: any record that violates this schema is
 rejected before it reaches the Spark layer.
 """
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, EmailStr, field_validator
 
 
 class Customer(BaseModel):
@@ -13,13 +13,13 @@ class Customer(BaseModel):
     Attributes:
         customer_id: Unique integer identifier for the customer.
         name: Full name; must be a non-empty string.
-        email: Contact email; must contain '@' and '.'.
+        email: Contact email; validated against RFC 5322 by pydantic[email].
         country: Country of residence; must be a non-empty string.
     """
 
     customer_id: int
     name: str
-    email: str
+    email: EmailStr
     country: str
 
     @field_validator("name", "country")
@@ -39,22 +39,4 @@ class Customer(BaseModel):
         """
         if not value or not value.strip():
             raise ValueError(f"'{info.field_name}' must be a non-empty string")
-        return value
-
-    @field_validator("email")
-    @classmethod
-    def must_be_valid_email(cls, value: str) -> str:
-        """Reject emails that do not contain '@' and '.'.
-
-        Args:
-            value: The email string to validate.
-
-        Returns:
-            The original value if it looks like a valid email.
-
-        Raises:
-            ValueError: If '@' or '.' are missing from the email.
-        """
-        if "@" not in value or "." not in value:
-            raise ValueError(f"'{value}' is not a valid email address")
         return value

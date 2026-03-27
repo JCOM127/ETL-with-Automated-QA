@@ -19,10 +19,15 @@ services:
     command: pytest -m integration -v --tb=short
 
   # Launch Jupyter Notebook for the poc.ipynb walkthrough.
+  # Security: token is required (set JUPYTER_TOKEN before running).
+  # Port is bound to 127.0.0.1 — only reachable from this machine.
+  # Usage: JUPYTER_TOKEN=mysecret docker-compose up notebook
   notebook:
     build: .
     ports:
-      - "8888:8888"
+      - "127.0.0.1:8888:8888"
+    environment:
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN:-changeme}
     volumes:
       - .:/app
     command: >
@@ -31,5 +36,4 @@ services:
         --port=8888
         --no-browser
         --allow-root
-        --NotebookApp.token=''
         --notebook-dir=/app/notebooks

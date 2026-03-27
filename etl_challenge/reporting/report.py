@@ -5,7 +5,10 @@ outcomes in one document, making the pipeline self-auditing.
 """
 
 import json
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from etl_challenge.audit.checks import AuditResult
 
@@ -46,3 +49,4 @@ def save_report(report: dict, path: str = "audit_report.json") -> None:
     """
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(report, fh, indent=2)
+    logger.info("Audit report saved to %s (overall_pass=%s)", path, report["overall_pass"])
