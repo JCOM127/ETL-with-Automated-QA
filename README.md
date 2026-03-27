@@ -47,8 +47,9 @@ docker compose run test
 # Run integration tests only, produces audit_report.json in this folder
 docker compose run integration
 
-# Open the notebook walkthrough at http://localhost:8888
-docker compose up notebook
+# Open the notebook — token required, change before sharing
+JUPYTER_TOKEN=mysecret docker compose up notebook
+# Then open: http://localhost:8888?token=mysecret
 ```
 
 ---
@@ -126,6 +127,34 @@ lint   ->  ruff check + ruff format --check
 test   ->  pytest tests/ -v --tb=short
 deploy ->  echo (mocked, no live target)
 ```
+
+---
+
+## Logging
+
+The pipeline uses Python's stdlib `logging` module — no extra dependencies. Each module
+owns a `logger = logging.getLogger(__name__)`. Levels in use:
+
+| Level | Where | What it says |
+|-------|-------|--------------|
+| `DEBUG` | `loader.py` | Every record accepted or rejected, full content |
+| `INFO` | `loader.py` | Summary counts after validation |
+| `INFO` | `reporting.py` | Report path and overall pass/fail on save |
+| `WARNING` | `checks.py` | Each check that returns `passed=False`, with details |
+| `ERROR` | `reporting.py` | If `audit_report.json` cannot be written |
+
+To activate logging locally:
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+> **PII warning:** `DEBUG` logs in `loader.py` print full records including names and
+> emails. Do not ship DEBUG-level logs to an external aggregator (Datadog, CloudWatch)
+> without first masking or hashing PII fields. `WARNING` logs in `checks.py` also
+> include duplicate email values. In production, replace raw values with hashed or
+> tokenised identifiers before any log is written.
 
 ---
 
