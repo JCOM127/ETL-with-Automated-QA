@@ -51,7 +51,9 @@ def _validate_records(raw: list[dict], model) -> tuple[list[dict], list[dict]]:
         try:
             model.model_validate(record)
             clean.append(record)
+            logger.debug("Accepted record: %s", record)
         except ValidationError as exc:
+            logger.debug("Rejected record: %s — reason: %s", record, exc)
             rejected.append({**record, "rejection_reason": str(exc)})
     return clean, rejected
 

@@ -4,10 +4,13 @@ Each function returns an AuditResult dataclass so the reporting layer
 can aggregate results without depending on check internals.
 """
 
+import logging
 from dataclasses import dataclass
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -38,15 +41,19 @@ def check_completeness(
     Returns:
         AuditResult with passed=True only when all NULL counts are zero.
     """
+    logger.debug("Running completeness check")
     cust_nulls = {
         col: customers_df.filter(F.col(col).isNull()).count()
         for col in ("name", "email", "country")
     }
     txn_nulls = {"amount": transactions_df.filter(F.col("amount").isNull()).count()}
     all_counts = {**cust_nulls, **txn_nulls}
+    passed = all(v == 0 for v in all_counts.values())
+    if not passed:
+        logger.warning("Completeness check FAILED: null counts %s", all_counts)
     return AuditResult(
         check_name="completeness",
-        passed=all(v == 0 for v in all_counts.values()),
+        passed=passed,
         details={"null_counts": all_counts},
     )
 
@@ -60,6 +67,7 @@ def check_uniqueness(customers_df: DataFrame) -> AuditResult:
     Returns:
         AuditResult with passed=True only when no duplicate emails exist.
     """
+    logger.debug("Running uniqueness check")
     duplicates = (
         customers_df.groupBy("email")
         .count()
@@ -68,6 +76,8 @@ def check_uniqueness(customers_df: DataFrame) -> AuditResult:
         .rdd.flatMap(lambda r: [r["email"]])
         .collect()
     )
+    if duplicates:
+        logger.warning("Uniqueness check FAILED: duplicate emails %s", duplicates)
     return AuditResult(
         check_name="uniqueness",
         passed=len(duplicates) == 0,
@@ -88,6 +98,7 @@ def check_referential_integrity(
     Returns:
         AuditResult with passed=True only when no orphan transactions exist.
     """
+    logger.debug("Running referential integrity check")
     customer_ids = customers_df.select("customer_id")
     orphans = (
         transactions_df.join(customer_ids, on="customer_id", how="left_anti")
@@ -96,6 +107,10 @@ def check_referential_integrity(
         .rdd.flatMap(lambda r: [r["customer_id"]])
         .collect()
     )
+    if orphans:
+        logger.warning(
+            "Referential integrity check FAILED: orphan customer_ids %s", orphans
+        )
     return AuditResult(
         check_name="referential_integrity",
         passed=len(orphans) == 0,
@@ -148,6 +163,7 @@ def check_reconciliation(
     Returns:
         AuditResult with passed=True only when every country total matches.
     """
+    logger.debug("Running reconciliation check")
     spark = SparkSession.builder.getOrCreate()
     raw_totals = _raw_totals_by_country(raw_customers, raw_transactions, spark)
     clean_totals = aggregated_df.withColumnRenamed("total_amount", "clean_total")
@@ -158,6 +174,12 @@ def check_reconciliation(
         r.asDict()
         for r in comparison.filter(F.col("raw_total") != F.col("clean_total")).collect()
     ]
+    if mismatches:
+        logger.warning(
+            "Reconciliation check FAILED: %d country mismatch(es) %s",
+            len(mismatches),
+            mismatches,
+        )
     return AuditResult(
         check_name="reconciliation",
         passed=len(mismatches) == 0,

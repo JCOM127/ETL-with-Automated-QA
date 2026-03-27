@@ -47,6 +47,12 @@ def save_report(report: dict, path: str = "audit_report.json") -> None:
         path: Filesystem path for the output file.  Defaults to
             'audit_report.json' in the current working directory.
     """
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(report, fh, indent=2)
-    logger.info("Audit report saved to %s (overall_pass=%s)", path, report["overall_pass"])
+    try:
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(report, fh, indent=2)
+        logger.info(
+            "Audit report saved to %s (overall_pass=%s)", path, report["overall_pass"]
+        )
+    except OSError as exc:
+        logger.error("Failed to save audit report to %s: %s", path, exc)
+        raise
