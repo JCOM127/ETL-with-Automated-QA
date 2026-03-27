@@ -25,7 +25,8 @@ def send_webhook(
         NotImplementedError: Always, until a real HTTP client is wired in.
     """
     raise NotImplementedError(
-        "send_webhook is a stub. In production, POST payload to url via requests.post()."
+        "send_webhook is a stub. "
+        "In production, POST payload to url via requests.post()."
     )
 
 

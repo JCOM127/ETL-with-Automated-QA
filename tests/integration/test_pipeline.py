@@ -16,7 +16,7 @@ from etl_challenge.transforms.pipeline import run_pipeline
 
 @pytest.mark.integration
 def test_load_and_validate_rejects_dirty_records():
-    """loader must produce at least one rejected customer and one rejected transaction."""
+    """Loader must reject at least one customer and one transaction."""
     result = load_and_validate(CUSTOMERS_RAW, TRANSACTIONS_RAW)
     assert len(result.rejected_customers) >= 1
     assert len(result.rejected_transactions) >= 1

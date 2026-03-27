@@ -8,9 +8,9 @@ import json
 import logging
 from datetime import datetime
 
-logger = logging.getLogger(__name__)
-
 from etl_challenge.audit.checks import AuditResult
+
+logger = logging.getLogger(__name__)
 
 
 def build_report(

@@ -9,10 +9,10 @@ from dataclasses import dataclass, field
 
 from pydantic import ValidationError
 
-logger = logging.getLogger(__name__)
-
 from etl_challenge.contracts.customer import Customer
 from etl_challenge.contracts.transaction import Transaction
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -73,12 +73,8 @@ def load_and_validate(
     """
     clean_c, rejected_c = _validate_records(raw_customers, Customer)
     clean_t, rejected_t = _validate_records(raw_transactions, Transaction)
-    logger.info(
-        "Customers: %d clean, %d rejected", len(clean_c), len(rejected_c)
-    )
-    logger.info(
-        "Transactions: %d clean, %d rejected", len(clean_t), len(rejected_t)
-    )
+    logger.info("Customers: %d clean, %d rejected", len(clean_c), len(rejected_c))
+    logger.info("Transactions: %d clean, %d rejected", len(clean_t), len(rejected_t))
     return IngestionResult(
         clean_customers=clean_c,
         clean_transactions=clean_t,
