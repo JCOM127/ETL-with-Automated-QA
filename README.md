@@ -129,6 +129,17 @@ deploy ->  echo (mocked, no live target)
 
 ---
 
+## Scalability note on the entrance gate
+
+The Pydantic gate iterates records in a Python loop, which is intentional for this
+scope. In production, data arrives via `spark.read.parquet()` or `spark.read.jdbc()`
+directly into Spark, bypassing the Python loop entirely. Record-level validation at
+that scale moves into Spark UDFs or schema enforcement at the source (Avro/Parquet
+schema, Kafka schema registry). The gate concept and architecture stay the same,
+only the execution layer changes.
+
+---
+
 ## Extending
 
 **New QA check:**
